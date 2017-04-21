@@ -98,7 +98,7 @@ DeepGreen DB further extends Greenplum Database by adding new data types,
  This document covers these features.
 \end_layout
 
-\begin_layout Chapter
+\begin_layout Section
 GUCs
 \end_layout
 
@@ -144,10 +144,6 @@ deepgreen.rev (string) Revision string.
  It is readonly, cannot be set.
 \end_layout
 
-\begin_layout Chapter
-New Data Types, Functions
-\end_layout
-
 \begin_layout Section
 Decimal64 and Decimal128
 \end_layout
@@ -163,13 +159,15 @@ Decimal64 and Decimal128 implement the 64 and 128 bits decimal floating
 \end_layout
 
 \begin_layout Section
-LZ4 Compression
+LZ4 and ZSTD Compression
 \end_layout
 
 \begin_layout Standard
-User can specify a new compression algorithm 'lz4' for table and/or column.
+User can specify two new compression algorithms 'lz4', or 'zstd' for table
+ and/or column.
  LZ4 is an extremely fast compression algorithm that can be up to ten times
  faster than the zlib algorithm.
+ ZSTD is slightly slower than LZ4 but offers better compression ratio.
 \end_layout
 
 \begin_layout Section
