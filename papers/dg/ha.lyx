@@ -1,0 +1,849 @@
+#LyX 2.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 508
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+DeepGreen HA/FT Solution
+\end_layout
+
+\begin_layout Author
+Feng Tian (ftian@vitessedata.com)
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+DeepGreen introduced a new suite of HA/FT solution with various settings,
+\end_layout
+
+\begin_layout Enumerate
+A synchronous replation solution using Linux DRBD (dg cluster)
+\end_layout
+
+\begin_layout Enumerate
+An asynchronous repliation solution using rsync (dg sync)
+\end_layout
+
+\begin_layout Enumerate
+Data transfer between two deepgreen Cclusters via XDrive (dg transfer)
+\end_layout
+
+\begin_layout Standard
+All three solutions are designed to be robust, efficient and reliable.
+ We tried to make administration simple, so that it is easy to use and more
+ importantly, reduce chance of operation error.
+ We suggest all new installation of DeepGreen to use these new solutions
+ and the old greenplum utilities like gpmirror, gpcrondump, gptransfer,
+ while still supported, are considered deprecated.
+\end_layout
+
+\begin_layout Section
+Synchronous Replication Using dg cluster
+\end_layout
+
+\begin_layout Standard
+The key to HA is multipath to data.
+ By far the most common hardware failure is disk failure, which, a typical
+ DeepGreen installation may use RAID to mask.
+ However, RAID5 won't tolerate double disk failure and other components
+ of server hardware like NIC, Memory/Motherboad/CPU, Power Supply, etc,
+ do fail.
+ DeepGreen provides a HA solution that will automatically failover a host/segmen
+t to another node.
+ 
+\end_layout
+
+\begin_layout Subsection
+Prerequisite
+\end_layout
+
+\begin_layout Standard
+Before install/initialize the cluster, user must set up each node in the
+ cluster properly.
+\end_layout
+
+\begin_layout Enumerate
+Operating system must be configured properly for DeepGreen.
+ Users should setup kernel limits properly, SELinux should be turned off
+ and firewall should be turned off.
+\end_layout
+
+\begin_layout Enumerate
+Network must be properly configured.
+ Especially, hostname should be setup correctly.
+\end_layout
+
+\begin_layout Enumerate
+ssh key has been exchanged.
+ DeepGreen software must be installed properly on master, master mirror
+ and each segment hosts.
+ DeepGreen user should be able to sudo without password.
+\end_layout
+
+\begin_layout Enumerate
+Create volume group for data storage.
+ See pvcreate, vgcreate manual.
+\end_layout
+
+\begin_layout Enumerate
+Optionally, create a volume group for temp storage.
+\end_layout
+
+\begin_layout Enumerate
+Install DRBD 8.4.
+ Set usage_count to no.
+\end_layout
+
+\begin_layout Subsection
+cluster.toml
+\end_layout
+
+\begin_layout Standard
+To use dg cluster, user need to create a directory on the master node.
+ The directory should contain a cluster.toml file, which describes the cluster
+ configuration.
+ The following is a documented cluster.toml file that will set up a cannonical
+ installtion.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+# cluster.toml
+\end_layout
+
+\begin_layout Plain Layout
+
+# DGHome is the deepgreen software installation dir.
+\end_layout
+
+\begin_layout Plain Layout
+
+DGHome = "/home/deepgreen/deepgreendb"
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# User, usually, it is the user running dg cluster
+\end_layout
+
+\begin_layout Plain Layout
+
+User = "deepgreen"
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Master host and mirror.
+\end_layout
+
+\begin_layout Plain Layout
+
+MasterHost = "xx0"
+\end_layout
+
+\begin_layout Plain Layout
+
+MasterMirror = "xx1"
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Segment hosts.
+  Must have at leas two hosts.
+  Master/mirror can run on 
+\end_layout
+
+\begin_layout Plain Layout
+
+# some of the hosts list here.
+\end_layout
+
+\begin_layout Plain Layout
+
+SegHosts = ["xx0", "xx1"] 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Segments per host.
+  This config has 2 hosts, each has 2 segs.
+  Therefore, 4 segs total.
+\end_layout
+
+\begin_layout Plain Layout
+
+SegsPerHost = 2
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Data install dir.
+\end_layout
+
+\begin_layout Plain Layout
+
+Dir = "/data/dgdata"
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Segment prefix, so, master will be installed in a dir dg-1, segments are
+ in dg0, dg1, etc
+\end_layout
+
+\begin_layout Plain Layout
+
+SegPrefix = "dg"
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Data base encoding, collation, etc.
+   We recommend utf8 and "C" collation.
+\end_layout
+
+\begin_layout Plain Layout
+
+Encoding = "UNICODE"
+\end_layout
+
+\begin_layout Plain Layout
+
+Collation = "C"
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Configuration of master, and seg.
+   We will use volume group /dev/dvdg.
+  In this example, 
+\end_layout
+
+\begin_layout Plain Layout
+
+# master/mirror has 2GB capacity, each seg has 2GB.
+   Note that they are replicated, so, on 
+\end_layout
+
+\begin_layout Plain Layout
+
+# each node, there will need 
+\end_layout
+
+\begin_layout Plain Layout
+
+# 2GB (master) + 2GB (master mirror) + 2GB x 2 (Seg) + 2GB x 2 (Seg mirror)
+ = 12 GB.
+\end_layout
+
+\begin_layout Plain Layout
+
+# Also, it need temp storage during query execution.
+   We set it to 1GB.
+  We do not replicate
+\end_layout
+
+\begin_layout Plain Layout
+
+# temp storage, so, each node need 1GB (master) + 1GB x 2 = 3GB.
+\end_layout
+
+\begin_layout Plain Layout
+
+#  
+\end_layout
+
+\begin_layout Plain Layout
+
+# So /dev/dvdg need 15GB to install deepgreen.
+\end_layout
+
+\begin_layout Plain Layout
+
+[Master]
+\end_layout
+
+\begin_layout Plain Layout
+
+Port = 5432
+\end_layout
+
+\begin_layout Plain Layout
+
+ReplicationPort = 10000
+\end_layout
+
+\begin_layout Plain Layout
+
+DataVG = "/dev/dgvg" 
+\end_layout
+
+\begin_layout Plain Layout
+
+DataSizeGB = 2
+\end_layout
+
+\begin_layout Plain Layout
+
+TempVG = "/dev/dgvg" 
+\end_layout
+
+\begin_layout Plain Layout
+
+TempSizeGB = 1
+\end_layout
+
+\begin_layout Plain Layout
+
+[Seg]
+\end_layout
+
+\begin_layout Plain Layout
+
+PortBase = 40000
+\end_layout
+
+\begin_layout Plain Layout
+
+ReplicationPortBase = 20000
+\end_layout
+
+\begin_layout Plain Layout
+
+DataVG = "/dev/dgvg" 
+\end_layout
+
+\begin_layout Plain Layout
+
+DataSizeGB = 2 
+\end_layout
+
+\begin_layout Plain Layout
+
+TempVG = "/dev/dgvg"
+\end_layout
+
+\begin_layout Plain Layout
+
+TempSizeGB = 1
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Installation
+\end_layout
+
+\begin_layout Standard
+Suppose the cluster.toml file is in ./install directory, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+dg cluster -dir=./install Install_Stage1
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Stage1 will create necessary directory, configuration file, etc, for gpinitsyste
+m in ./install directory.
+ Run the shell file to init DeepGreen cluster.
+ If init system failed, one should examine gpinitsystem error logs to fix.
+ After successfully inited system, run
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+dg cluster -dir=./install Install_Stage2
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+to finish all replication setup.
+\end_layout
+
+\begin_layout Subsection
+Administion
+\end_layout
+
+\begin_layout Standard
+Cluster created by dg cluster should be started/stoped using dg cluster
+ command.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+dg cluster -dir=./install Start
+\end_layout
+
+\begin_layout Plain Layout
+
+dg cluster -dir=./install Stop
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Failback
+\end_layout
+
+\begin_layout Standard
+Cluster created b dg cluster will automatically failover if a hosts failed.
+ Once the failed node is repaired, user should failback the node.
+ Failback is manual.
+ For example, to fail back segment 2 and 3, run
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+dg cluster -dir=./install FailbackSegs '2,3'
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Asynchronous Replication Using dg sync
+\end_layout
+
+\begin_layout Standard
+dg sync is a utility that copies a DeepGreen cluster to remote site.
+ In new DeepGreen cluster, we recommend using dg sync to backup, restore,
+ over older gpcrondump tool.
+ dg sync uses rsync to copy data, rsync must be installed in all hosts of
+ the source cluster and sync destination cluster.
+ For RHEL/CentOs user, must also intall net-tools.
+\end_layout
+
+\begin_layout Subsection
+sync.toml
+\end_layout
+
+\begin_layout Standard
+To use dg sync, user need to create a directory on the master node of the
+ sync target cluster.
+ The directory should contain a sync.toml file.
+ The following is an example.
+ sync.toml describes the source and target cluster.
+ The content of the file should be self explainatory except that user need
+ to specifiy the mount point of linux file system where master and segment
+ data directory reside.
+ Pretty much the only requirement of the toml file is that the number of
+ segments of src and tgt cluster mush match.
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+[Src]
+\end_layout
+
+\begin_layout Plain Layout
+
+DgHome = "/data/deepgreen/work/deepgreen/run/dghome"
+\end_layout
+
+\begin_layout Plain Layout
+
+[Src.Master]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg0"
+\end_layout
+
+\begin_layout Plain Layout
+
+Port = 5432
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg-1"
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\begin_layout Plain Layout
+
+[[Src.Segs]]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg0"
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg0" 
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\begin_layout Plain Layout
+
+[[Src.Segs]]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg0"
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg1" 
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\begin_layout Plain Layout
+
+[[Src.Segs]]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg1"
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg2" 
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\begin_layout Plain Layout
+
+[[Src.Segs]]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg1"
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg3" 
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\begin_layout Plain Layout
+
+[Tgt]
+\end_layout
+
+\begin_layout Plain Layout
+
+DgHome = "/data/deepgreen/work/deepgreen/run/dghome"
+\end_layout
+
+\begin_layout Plain Layout
+
+PortBase = 40000
+\end_layout
+
+\begin_layout Plain Layout
+
+[Tgt.Master]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg2"
+\end_layout
+
+\begin_layout Plain Layout
+
+Port = 5432
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg-1"
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\begin_layout Plain Layout
+
+[[Tgt.Segs]]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg2"
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg0" 
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\begin_layout Plain Layout
+
+[[Tgt.Segs]]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg2"
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg1" 
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\begin_layout Plain Layout
+
+[[Tgt.Segs]]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg3"
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg2" 
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\begin_layout Plain Layout
+
+[[Tgt.Segs]]
+\end_layout
+
+\begin_layout Plain Layout
+
+Host = "dg3"
+\end_layout
+
+\begin_layout Plain Layout
+
+DataDir = "/data/mnt/dg/dg3" 
+\end_layout
+
+\begin_layout Plain Layout
+
+MountPt = "/data/mnt"
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+dg sync -dir=./dir [-full]
+\end_layout
+
+\begin_layout Standard
+If -full flag is specified, dg sync will do a full copy.
+ Otherwise, it will do incremental copy.
+\end_layout
+
+\begin_layout Section
+Copy Database/Schema/Table using dg transfer
+\end_layout
+
+\begin_layout Standard
+We recommend using dg transfer to copy data between two DeepGreen clusters,
+ over older gptransfer tools.
+ See dg command manual for details.
+\end_layout
+
+\end_body
+\end_document
