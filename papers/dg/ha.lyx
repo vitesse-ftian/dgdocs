@@ -62,6 +62,7 @@
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
+\listings_params "basicstyle={\ttfamily \small}"
 \tracking_changes false
 \output_changes false
 \html_math_output 0
@@ -239,12 +240,12 @@ MasterMirror = "xx1"
 
 # Segment hosts.
   Must have at leas two hosts.
-  Master/mirror can run on 
+  
 \end_layout
 
 \begin_layout Plain Layout
 
-# some of the hosts list here.
+# Master/mirror can run on some of the hosts list here.
 \end_layout
 
 \begin_layout Plain Layout
@@ -260,7 +261,12 @@ SegHosts = ["xx0", "xx1"]
 
 # Segments per host.
   This config has 2 hosts, each has 2 segs.
-  Therefore, 4 segs total.
+  
+\end_layout
+
+\begin_layout Plain Layout
+
+# Therefore, 4 segs total.
 \end_layout
 
 \begin_layout Plain Layout
@@ -288,8 +294,12 @@ Dir = "/data/dgdata"
 
 \begin_layout Plain Layout
 
-# Segment prefix, so, master will be installed in a dir dg-1, segments are
- in dg0, dg1, etc
+# Segment prefix, so, master will be installed in a dir dg-1, 
+\end_layout
+
+\begin_layout Plain Layout
+
+# segments are in dg0, dg1, etc
 \end_layout
 
 \begin_layout Plain Layout
@@ -304,7 +314,12 @@ SegPrefix = "dg"
 \begin_layout Plain Layout
 
 # Data base encoding, collation, etc.
-   We recommend utf8 and "C" collation.
+   We recommend utf8 
+\end_layout
+
+\begin_layout Plain Layout
+
+# and "C" collation.
 \end_layout
 
 \begin_layout Plain Layout
@@ -324,37 +339,42 @@ Collation = "C"
 \begin_layout Plain Layout
 
 # Configuration of master, and seg.
-   We will use volume group /dev/dvdg.
-  In this example, 
+   We will use volume 
 \end_layout
 
 \begin_layout Plain Layout
 
-# master/mirror has 2GB capacity, each seg has 2GB.
-   Note that they are replicated, so, on 
+# group /dev/dvdg.
+  In this example, master/mirror has 2GB capacity, 
 \end_layout
 
 \begin_layout Plain Layout
 
-# each node, there will need 
+# each seg has 2GB.
+   Note that they are replicated, so, on each node, 
 \end_layout
 
 \begin_layout Plain Layout
 
-# 2GB (master) + 2GB (master mirror) + 2GB x 2 (Seg) + 2GB x 2 (Seg mirror)
- = 12 GB.
+# there will need 2GB (master) + 2GB (master mirror) + 2GB x 2 (Seg) 
 \end_layout
 
 \begin_layout Plain Layout
 
-# Also, it need temp storage during query execution.
+# + 2GB x 2 (Seg mirror) = 12 GB.
+   Also, it need temp storage during 
+\end_layout
+
+\begin_layout Plain Layout
+
+# query execution.
    We set it to 1GB.
-  We do not replicate
+  We do not replicate temp 
 \end_layout
 
 \begin_layout Plain Layout
 
-# temp storage, so, each node need 1GB (master) + 1GB x 2 = 3GB.
+# storage, so, each node need 1GB (master) + 1GB x 2 = 3GB.
 \end_layout
 
 \begin_layout Plain Layout

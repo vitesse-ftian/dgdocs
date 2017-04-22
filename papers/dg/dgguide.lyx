@@ -62,6 +62,7 @@
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
+\listings_params "basicstyle={\ttfamily \small}"
 \tracking_changes false
 \output_changes false
 \html_math_output 0
